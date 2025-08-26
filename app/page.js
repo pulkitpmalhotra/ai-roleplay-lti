@@ -171,7 +171,7 @@ export default async function HomePage() {
       <div className="grid md:grid-cols-2 gap-8">
         <div className="card">
           <div className="card-header">
-            <h3 className="text-lg font-semibent text-gray-900">AI Technology</h3>
+            <h3 className="text-lg font-semibold text-gray-900">AI Technology</h3>
           </div>
           <div className="card-body">
             <ul className="space-y-2 text-sm">
