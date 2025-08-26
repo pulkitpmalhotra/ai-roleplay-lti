@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '../../../../lib/database-mongodb';
-import { ObjectId } from 'mongodb';
+import { SupabaseHelper } from '../../../../lib/database-supabase';
 
 export async function GET() {
   try {
