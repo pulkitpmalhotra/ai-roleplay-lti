@@ -1,25 +1,24 @@
 import Link from 'next/link';
+import { getDatabase } from '../lib/database';
 
 async function getScenarios() {
   try {
-    // Use environment variable or fallback to localhost for development
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NODE_ENV === 'production' 
-        ? 'https://connection-fix-2.preview.emergentagent.com'
-        : 'http://localhost:3000';
-        
-    const response = await fetch(`${baseUrl}/api/scenarios`, {
-      cache: 'no-store'
-    });
-    if (response.ok) {
-      const data = await response.json();
-      return data.scenarios || [];
-    }
+    // Direct database access for better performance and build compatibility
+    const db = getDatabase();
+    
+    const stmt = db.prepare(`
+      SELECT id, title, description, objective, bot_character, bot_tone, created_at
+      FROM scenarios 
+      WHERE is_active = 1 
+      ORDER BY created_at DESC
+    `);
+    
+    const scenarios = stmt.all();
+    return scenarios || [];
   } catch (error) {
     console.error('Error fetching scenarios:', error);
+    return [];
   }
-  return [];
 }
 
 export default async function HomePage() {
