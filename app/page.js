@@ -1,28 +1,26 @@
-import Link from 'next/link';
-import { getDatabase } from '../lib/database';
+import { getDatabase } from '../lib/database-mongodb';
 
-async function getScenarios() {
+export default async function Home() {
+  let scenarios = [];
+  
   try {
-    // Direct database access for better performance and build compatibility
-    const db = getDatabase();
+    const db = await getDatabase();
+    const scenarioList = await db.collection('scenarios')
+      .find({ is_active: true })
+      .limit(3)
+      .sort({ created_at: -1 })
+      .toArray();
     
-    const stmt = db.prepare(`
-      SELECT id, title, description, objective, bot_character, bot_tone, created_at
-      FROM scenarios 
-      WHERE is_active = 1 
-      ORDER BY created_at DESC
-    `);
-    
-    const scenarios = stmt.all();
-    return scenarios || [];
+    scenarios = scenarioList.map(scenario => ({
+      id: scenario._id.toString(),
+      title: scenario.title,
+      description: scenario.description,
+      bot_character: scenario.bot_character,
+      created_at: scenario.created_at
+    }));
   } catch (error) {
     console.error('Error fetching scenarios:', error);
-    return [];
   }
-}
-
-export default async function HomePage() {
-  const scenarios = await getScenarios();
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -32,21 +30,25 @@ export default async function HomePage() {
           AI Roleplay Training
         </h1>
         <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-          Practice real-world scenarios with AI-powered roleplay training. 
-          Designed for integration with Docebo LMS and powered by Gemini 2.0 Flash 
-          for cost-effective, scalable learning experiences.
+          Practice real-world scenarios with AI-powered roleplay training. Designed for integration with Docebo LMS and powered by Gemini 2.0 Flash for cost-effective, scalable learning experiences.
         </p>
         <div className="flex justify-center space-x-4">
-          <Link href="/api/lti/launch?test=true" className="btn-primary text-lg px-8 py-3">
+          <a 
+            href="/api/lti/launch?test=true"
+            className="btn-primary text-lg px-8 py-3"
+          >
             Try Demo
-          </Link>
-          <Link href="/admin" className="btn-secondary text-lg px-8 py-3">
+          </a>
+          <a 
+            href="/admin"
+            className="btn-secondary text-lg px-8 py-3"
+          >
             Admin Dashboard
-          </Link>
+          </a>
         </div>
       </div>
 
-      {/* Features Grid */}
+      {/* Features */}
       <div className="grid md:grid-cols-3 gap-8 mb-16">
         <div className="card text-center">
           <div className="card-body">
@@ -56,9 +58,7 @@ export default async function HomePage() {
               </svg>
             </div>
             <h3 className="text-xl font-semibold mb-2">AI-Powered Conversations</h3>
-            <p className="text-gray-600">
-              Engage in realistic roleplay scenarios with AI characters powered by Gemini 2.0 Flash
-            </p>
+            <p className="text-gray-600">Engage in realistic roleplay scenarios with AI characters powered by Gemini 2.0 Flash</p>
           </div>
         </div>
 
@@ -70,9 +70,7 @@ export default async function HomePage() {
               </svg>
             </div>
             <h3 className="text-xl font-semibold mb-2">Progress Tracking</h3>
-            <p className="text-gray-600">
-              Real-time tracking of learning objectives with automated grading and LMS integration
-            </p>
+            <p className="text-gray-600">Real-time tracking of learning objectives with automated grading and LMS integration</p>
           </div>
         </div>
 
@@ -85,46 +83,38 @@ export default async function HomePage() {
               </svg>
             </div>
             <h3 className="text-xl font-semibold mb-2">Admin Configurable</h3>
-            <p className="text-gray-600">
-              Create custom scenarios with specific characters, objectives, and learning goals
-            </p>
+            <p className="text-gray-600">Create custom scenarios with specific characters, objectives, and learning goals</p>
           </div>
         </div>
       </div>
 
       {/* Available Scenarios */}
-      {scenarios.length > 0 && (
-        <div className="mb-16">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-            Available Training Scenarios
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {scenarios.slice(0, 3).map((scenario) => (
-              <div key={scenario.id} className="card">
-                <div className="card-body">
-                  <h3 className="text-xl font-semibold mb-2">{scenario.title}</h3>
-                  <p className="text-gray-600 text-sm mb-3">{scenario.description}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="badge badge-info">{scenario.bot_character}</span>
-                    <span className="text-xs text-gray-500">
-                      {new Date(scenario.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
+      <div className="mb-16">
+        <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Available Training Scenarios</h2>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {scenarios.map(scenario => (
+            <div key={scenario.id} className="card">
+              <div className="card-body">
+                <h3 className="text-xl font-semibold mb-2">{scenario.title}</h3>
+                <p className="text-gray-600 text-sm mb-3">{scenario.description}</p>
+                <div className="flex items-center justify-between">
+                  <span className="badge badge-info">{scenario.bot_character}</span>
+                  <span className="text-xs text-gray-500">
+                    {scenario.created_at ? new Date(scenario.created_at).toLocaleDateString() : 'N/A'}
+                  </span>
                 </div>
               </div>
-            ))}
-          </div>
-          {scenarios.length > 3 && (
-            <div className="text-center mt-6">
-              <Link href="/api/lti/launch?test=true" className="btn-primary">
-                View All Scenarios
-              </Link>
             </div>
-          )}
+          ))}
         </div>
-      )}
+        <div className="text-center mt-6">
+          <a href="/api/lti/launch?test=true" className="btn-primary">
+            View All Scenarios
+          </a>
+        </div>
+      </div>
 
-      {/* LTI Integration Info */}
+      {/* LTI Integration Information */}
       <div className="card mb-16">
         <div className="card-header">
           <h2 className="text-2xl font-semibold text-gray-900">LTI Integration for Docebo</h2>
@@ -173,7 +163,7 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* Technical Specs */}
+      {/* Technology Information */}
       <div className="grid md:grid-cols-2 gap-8">
         <div className="card">
           <div className="card-header">
@@ -196,7 +186,7 @@ export default async function HomePage() {
           </div>
           <div className="card-body">
             <ul className="space-y-2 text-sm">
-              <li><strong>Database:</strong> SQLite with session persistence</li>
+              <li><strong>Database:</strong> MongoDB with session persistence</li>
               <li><strong>Frontend:</strong> Next.js 14 with Tailwind CSS</li>
               <li><strong>Security:</strong> JWT tokens and LTI validation</li>
               <li><strong>Scalability:</strong> Optimized for multiple users</li>
