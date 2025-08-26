@@ -145,7 +145,7 @@ class LTIRoleplayAPITester:
         
         created_scenario_id = None
         if success2 and isinstance(response2, dict):
-            created_scenario_id = response2.get('scenario', {}).get('id')
+            created_scenario_id = response2.get('scenarioId')  # Changed from scenario.id to scenarioId
         
         # Test PUT update scenario (if we created one)
         success3 = True
