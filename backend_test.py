@@ -87,28 +87,36 @@ class LTIRoleplayAPITester:
         return success
 
     def test_lti_launch_api(self):
-        """Test LTI launch API endpoint"""
+        """Test LTI launch API endpoint - specifically the 500 error case"""
         print("\n" + "="*50)
-        print("TESTING LTI LAUNCH API")
+        print("TESTING LTI LAUNCH API - FOCUS ON 500 ERROR")
         print("="*50)
         
-        # Test GET request for LTI launch info
+        # Test the specific URL that was giving 500 error
         success1, response1 = self.run_test(
+            "LTI Launch with test=true (500 error case)",
+            "GET",
+            "/api/lti/launch?test=true&_rsc=acgkz",
+            200  # Should redirect to /select-scenario, not give 500
+        )
+        
+        # Test basic LTI launch info
+        success2, response2 = self.run_test(
             "LTI Launch Info",
             "GET",
             "/api/lti/launch",
             200
         )
         
-        # Test GET request with test parameter (should redirect or return page)
-        success2, response2 = self.run_test(
-            "LTI Test Launch",
+        # Test simple test launch without extra parameters
+        success3, response3 = self.run_test(
+            "Simple LTI Test Launch",
             "GET",
             "/api/lti/launch?test=true",
-            200  # Changed from 307 to 200 as it returns a page instead of redirecting
+            200  # Should redirect to /select-scenario
         )
         
-        return success1 and success2
+        return success1 and success2 and success3
 
     def test_admin_scenarios_api(self):
         """Test admin scenarios API endpoints"""
