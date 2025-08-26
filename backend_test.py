@@ -336,18 +336,22 @@ class LTIRoleplayAPITester:
         return False
 
     def run_all_tests(self):
-        """Run all API tests"""
-        print("🚀 Starting LTI Gemini Roleplay Bot API Tests")
+        """Run all API tests focusing on Supabase implementation"""
+        print("🚀 Starting LTI Gemini Roleplay Bot API Tests - Supabase Edition")
         print(f"🌐 Base URL: {self.base_url}")
         print("="*60)
         
-        # Test database initialization first
-        db_success = self.test_database_initialization()
-        
-        # Test core APIs
+        # Test core APIs first
         scenarios_success = self.test_scenarios_api()
+        
+        # Test the specific 500 error case
         lti_success = self.test_lti_launch_api()
-        admin_success = self.test_admin_scenarios_api()
+        
+        # Test admin dashboard
+        admin_dashboard_success = self.test_admin_dashboard()
+        
+        # Test admin scenarios API
+        admin_scenarios_success = self.test_admin_scenarios_api()
         
         # Test roleplay APIs (depends on scenarios)
         roleplay_start_success = self.test_roleplay_start_api()
@@ -355,7 +359,7 @@ class LTIRoleplayAPITester:
         
         # Print final results
         print("\n" + "="*60)
-        print("📊 FINAL TEST RESULTS")
+        print("📊 FINAL TEST RESULTS - SUPABASE BACKEND")
         print("="*60)
         print(f"Tests Run: {self.tests_run}")
         print(f"Tests Passed: {self.tests_passed}")
@@ -363,10 +367,10 @@ class LTIRoleplayAPITester:
         
         # Detailed results
         results = {
-            "Database Initialization": "✅" if db_success else "❌",
-            "Scenarios API": "✅" if scenarios_success else "❌",
-            "LTI Launch API": "✅" if lti_success else "❌",
-            "Admin Scenarios API": "✅" if admin_success else "❌",
+            "Scenarios API (Supabase)": "✅" if scenarios_success else "❌",
+            "LTI Launch API (500 Error Fix)": "✅" if lti_success else "❌",
+            "Admin Dashboard": "✅" if admin_dashboard_success else "❌",
+            "Admin Scenarios API": "✅" if admin_scenarios_success else "❌",
             "Roleplay Start API": "✅" if roleplay_start_success else "❌",
             "Roleplay Session API": "✅" if roleplay_session_success else "❌"
         }
@@ -375,8 +379,22 @@ class LTIRoleplayAPITester:
         for test_name, result in results.items():
             print(f"  {result} {test_name}")
         
+        # Check for critical failures
+        critical_failures = []
+        if not scenarios_success:
+            critical_failures.append("Scenarios API failing - Supabase connection issue")
+        if not lti_success:
+            critical_failures.append("LTI Launch still giving 500 error")
+        if not admin_dashboard_success:
+            critical_failures.append("Admin dashboard not loading")
+            
+        if critical_failures:
+            print("\n🚨 CRITICAL ISSUES FOUND:")
+            for failure in critical_failures:
+                print(f"  ❌ {failure}")
+        
         # Return overall success
-        all_critical_passed = db_success and scenarios_success and lti_success
+        all_critical_passed = scenarios_success and lti_success and admin_dashboard_success
         return all_critical_passed
 
 def main():
