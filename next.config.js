@@ -8,6 +8,12 @@ const nextConfig = {
     JWT_SECRET: process.env.JWT_SECRET,
     APP_URL: process.env.APP_URL,
   },
+  // Ensure all pages are dynamically rendered for database access
+  output: 'standalone',
+  // Optimize for serverless deployment
+  experimental: {
+    outputFileTracingRoot: process.cwd(),
+  }
 }
 
 module.exports = nextConfig
