@@ -1,76 +1,24 @@
-'use client';
+import Link from 'next/link';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-
-export default function SelectScenarioPage() {
-  const [scenarios, setScenarios] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const searchParams = useSearchParams();
-  const router = useRouter();
-
-  const userId = searchParams.get('user_id');
-  const contextId = searchParams.get('context_id');
-  const resourceLinkId = searchParams.get('resource_link_id');
-
-  useEffect(() => {
-    fetchScenarios();
-  }, []);
-
-  const fetchScenarios = async () => {
-    try {
-      const response = await fetch('/api/scenarios');
-      if (!response.ok) throw new Error('Failed to fetch scenarios');
-      
-      const data = await response.json();
-      setScenarios(data.scenarios || []);
-    } catch (err) {
-      setError('Failed to load scenarios');
-      console.error('Error fetching scenarios:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const startScenario = async (scenarioId) => {
-    try {
-      setLoading(true);
-      
-      const response = await fetch('/api/roleplay/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          scenarioId,
-          contextId,
-          resourceLinkId
-        })
-      });
-
-      if (!response.ok) throw new Error('Failed to start scenario');
-      
-      const data = await response.json();
-      
-      // Redirect to roleplay interface
-      router.push(`/roleplay/${data.sessionToken}`);
-      
-    } catch (err) {
-      setError('Failed to start scenario');
-      console.error('Error starting scenario:', err);
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    );
+async function getScenarios() {
+  try {
+    const response = await fetch('http://localhost:3000/api/scenarios', {
+      cache: 'no-store'
+    });
+    if (!response.ok) throw new Error('Failed to fetch scenarios');
+    const data = await response.json();
+    return data.scenarios || [];
+  } catch (error) {
+    console.error('Error fetching scenarios:', error);
+    return [];
   }
+}
+
+export default async function SelectScenarioPage({ searchParams }) {
+  const scenarios = await getScenarios();
+  const userId = searchParams.user_id;
+  const contextId = searchParams.context_id;
+  const resourceLinkId = searchParams.resource_link_id;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -82,13 +30,6 @@ export default function SelectScenarioPage() {
           Select a roleplay scenario to begin your training session. Each scenario is designed to help you practice specific skills.
         </p>
       </div>
-
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-400 text-red-700">
-          <p className="font-medium">Error</p>
-          <p>{error}</p>
-        </div>
-      )}
 
       {scenarios.length === 0 ? (
         <div className="text-center py-12">
@@ -102,7 +43,7 @@ export default function SelectScenarioPage() {
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {scenarios.map((scenario) => (
+          {scenarios.slice(0, 6).map((scenario) => (
             <div key={scenario.id} className="card hover:shadow-lg transition-shadow">
               <div className="card-body">
                 <div className="mb-4">
@@ -124,13 +65,18 @@ export default function SelectScenarioPage() {
                   <p className="text-sm text-gray-600">{scenario.objective}</p>
                 </div>
 
-                <button
-                  onClick={() => startScenario(scenario.id)}
-                  disabled={loading}
-                  className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Starting...' : 'Start Training'}
-                </button>
+                <form action="/api/roleplay/start-session" method="post" className="w-full">
+                  <input type="hidden" name="userId" value={userId} />
+                  <input type="hidden" name="scenarioId" value={scenario.id} />
+                  <input type="hidden" name="contextId" value={contextId} />
+                  <input type="hidden" name="resourceLinkId" value={resourceLinkId} />
+                  <button
+                    type="submit"
+                    className="w-full btn-primary"
+                  >
+                    Start Training
+                  </button>
+                </form>
               </div>
             </div>
           ))}
@@ -166,6 +112,17 @@ export default function SelectScenarioPage() {
               <p className="text-sm text-gray-600">Your progress is automatically tracked and graded.</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Test/Demo Info */}
+      <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-blue-900 mb-2">Demo Mode Active</h3>
+        <p className="text-blue-700 text-sm">
+          You are currently in demo mode. In production, this page would be launched from your Docebo LMS course.
+        </p>
+        <div className="mt-3 text-xs text-blue-600">
+          <p>User ID: {userId} | Context: {contextId} | Resource: {resourceLinkId}</p>
         </div>
       </div>
     </div>
