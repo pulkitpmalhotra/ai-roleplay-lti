@@ -132,6 +132,7 @@ class LTIRoleplayAPITester:
         )
         
         return success
+    def test_admin_scenarios_api(self):
         """Test admin scenarios API endpoints"""
         print("\n" + "="*50)
         print("TESTING ADMIN SCENARIOS API")
