@@ -138,14 +138,18 @@ metadata:
 test_plan:
   current_focus:
     - "Database Initialization and Connectivity"
-    - "GET /api/scenarios endpoint"
     - "GET /api/lti/launch endpoint"
     - "Admin Scenarios CRUD Operations"
     - "Roleplay Session Management"
-  stuck_tasks: []
+  stuck_tasks:
+    - "GET /api/lti/launch endpoint"
+    - "Admin Scenarios CRUD Operations"
+    - "Roleplay Session Management"
   test_all: true
   test_priority: "high_first"
 
 agent_communication:
   - agent: "testing"
     message: "✅ ALL BACKEND TESTS PASSED WITH 100% SUCCESS RATE! The LTI Gemini Roleplay Bot backend is fully functional. Database connectivity, API endpoints, LTI launch functionality, admin operations, and session management are all working correctly. 37 scenarios loaded in database including default scenario. No critical issues found."
+  - agent: "testing"
+    message: "🚨 CRITICAL ISSUES FOUND: Supabase migration incomplete! Only scenarios API migrated to Supabase. LTI launch (500 error), admin scenarios API, and roleplay engine still using MongoDB causing failures. Missing Supabase environment variables. Need to complete migration and add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to environment."
