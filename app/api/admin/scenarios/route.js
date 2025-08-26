@@ -25,7 +25,7 @@ export async function POST(request) {
     const scenarioData = await request.json();
     
     // Validate required fields
-    const requiredFields = ['title', 'description', 'objective', 'bot_character', 'bot_tone', 'bot_context'];
+    const requiredFields = ['title', 'description', 'objective', 'botCharacter', 'botTone', 'botContext'];
     for (const field of requiredFields) {
       if (!scenarioData[field]) {
         return NextResponse.json({
@@ -35,24 +35,24 @@ export async function POST(request) {
       }
     }
 
-    const db = await getDatabase();
+    const db = new SupabaseHelper();
     
     const newScenario = {
-      ...scenarioData,
-      learning_objectives: scenarioData.learning_objectives || [],
-      created_at: new Date(),
-      updated_at: new Date(),
+      title: scenarioData.title,
+      description: scenarioData.description,
+      objective: scenarioData.objective,
+      bot_character: scenarioData.botCharacter,
+      bot_tone: scenarioData.botTone,
+      bot_context: scenarioData.botContext,
+      learning_objectives: JSON.stringify(scenarioData.learningObjectives || []),
       is_active: true
     };
 
-    const result = await db.collection('scenarios').insertOne(newScenario);
+    const result = await db.createScenario(newScenario);
     
     return NextResponse.json({
       success: true,
-      scenario: {
-        id: result.insertedId.toString(),
-        ...newScenario
-      }
+      scenario: result
     });
     
   } catch (error) {
@@ -77,21 +77,21 @@ export async function PUT(request) {
     }
 
     const updateData = await request.json();
-    const db = await getDatabase();
+    const db = new SupabaseHelper();
     
-    await db.collection('scenarios').updateOne(
-      { _id: new ObjectId(scenarioId) },
-      { 
-        $set: { 
-          ...updateData, 
-          updated_at: new Date() 
-        } 
-      }
-    );
+    const result = await db.updateScenario(scenarioId, {
+      title: updateData.title,
+      description: updateData.description,
+      objective: updateData.objective,
+      bot_character: updateData.botCharacter,
+      bot_tone: updateData.botTone,
+      bot_context: updateData.botContext,
+      learning_objectives: JSON.stringify(updateData.learningObjectives || [])
+    });
     
     return NextResponse.json({
       success: true,
-      message: 'Scenario updated successfully'
+      scenario: result
     });
     
   } catch (error) {
@@ -115,13 +115,8 @@ export async function DELETE(request) {
       }, { status: 400 });
     }
 
-    const db = await getDatabase();
-    
-    // Soft delete - mark as inactive
-    await db.collection('scenarios').updateOne(
-      { _id: new ObjectId(scenarioId) },
-      { $set: { is_active: false, updated_at: new Date() } }
-    );
+    const db = new SupabaseHelper();
+    await db.deleteScenario(scenarioId);
     
     return NextResponse.json({
       success: true,
