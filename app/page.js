@@ -6,7 +6,7 @@ async function getScenarios() {
     const baseUrl = process.env.VERCEL_URL 
       ? `https://${process.env.VERCEL_URL}` 
       : process.env.NODE_ENV === 'production' 
-        ? 'https://train-ai-mentor.preview.emergentagent.com'
+        ? 'https://connection-fix-2.preview.emergentagent.com'
         : 'http://localhost:3000';
         
     const response = await fetch(`${baseUrl}/api/scenarios`, {
@@ -135,7 +135,7 @@ export default async function HomePage() {
             <div>
               <h3 className="text-lg font-semibold mb-3">LTI Configuration</h3>
               <div className="space-y-2 font-mono text-sm bg-gray-50 p-4 rounded">
-                <div><strong>Launch URL:</strong> https://train-ai-mentor.preview.emergentagent.com/api/lti/launch</div>
+                <div><strong>Launch URL:</strong> https://connection-fix-2.preview.emergentagent.com/api/lti/launch</div>
                 <div><strong>LTI Version:</strong> 1.1 & 1.3 Compatible</div>
                 <div><strong>Privacy:</strong> Name, Email, Role</div>
                 <div><strong>Features:</strong> Grade Passback, Deep Linking</div>
