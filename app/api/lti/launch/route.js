@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { initDatabase, SupabaseHelper } from '../../../../lib/database-supabase';
+import { SupabaseHelper } from '../../../../lib/database-supabase';
 import LTIProvider from '../../../../lib/lti-provider';
 
 export async function POST(request) {
@@ -32,7 +32,7 @@ export async function POST(request) {
     // Fallback to LTI 1.1 (OAuth signature)
     if (!validLaunch && params.oauth_signature) {
       console.log('Attempting LTI 1.1 validation...');
-      const url = `${process.env.APP_URL}/api/lti/launch`;
+      const url = `${process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL}/api/lti/launch`;
       validLaunch = ltiProvider.validateLTI11Launch(
         params, 
         params.oauth_signature, 
@@ -88,11 +88,19 @@ export async function GET(request) {
   
   // Simple test launch for development
   if (searchParams.get('test') === 'true') {
-    return NextResponse.redirect(new URL('/select-scenario?user_id=1&context_id=test&resource_link_id=test', request.url));
+    const testUrl = `/select-scenario?user_id=1&context_id=test&resource_link_id=test`;
+    return NextResponse.redirect(new URL(testUrl, request.url));
   }
 
   return NextResponse.json({ 
     message: 'LTI Launch endpoint. Use POST for actual launches.',
-    test_url: `${request.url}?test=true`
+    test_url: `${request.url}?test=true`,
+    supported_versions: ['LTI 1.1', 'LTI 1.3'],
+    configuration: {
+      launch_url: `${process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL}/api/lti/launch`,
+      version: 'LTI 1.1 & 1.3 Compatible',
+      privacy: 'Name, Email, Role',
+      features: 'Grade Passback, Deep Linking'
+    }
   });
 }
