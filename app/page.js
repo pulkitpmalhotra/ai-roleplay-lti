@@ -1,29 +1,22 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
-export default function HomePage() {
-  const [scenarios, setScenarios] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchScenarios();
-  }, []);
-
-  const fetchScenarios = async () => {
-    try {
-      const response = await fetch('/api/scenarios');
-      if (response.ok) {
-        const data = await response.json();
-        setScenarios(data.scenarios || []);
-      }
-    } catch (error) {
-      console.error('Error fetching scenarios:', error);
-    } finally {
-      setLoading(false);
+async function getScenarios() {
+  try {
+    const response = await fetch('http://localhost:3000/api/scenarios', {
+      cache: 'no-store'
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return data.scenarios || [];
     }
-  };
+  } catch (error) {
+    console.error('Error fetching scenarios:', error);
+  }
+  return [];
+}
+
+export default async function HomePage() {
+  const scenarios = await getScenarios();
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -94,7 +87,7 @@ export default function HomePage() {
       </div>
 
       {/* Available Scenarios */}
-      {!loading && scenarios.length > 0 && (
+      {scenarios.length > 0 && (
         <div className="mb-16">
           <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
             Available Training Scenarios
@@ -135,7 +128,7 @@ export default function HomePage() {
             <div>
               <h3 className="text-lg font-semibold mb-3">LTI Configuration</h3>
               <div className="space-y-2 font-mono text-sm bg-gray-50 p-4 rounded">
-                <div><strong>Launch URL:</strong> {typeof window !== 'undefined' ? window.location.origin : ''}/api/lti/launch</div>
+                <div><strong>Launch URL:</strong> https://train-ai-mentor.preview.emergentagent.com/api/lti/launch</div>
                 <div><strong>LTI Version:</strong> 1.1 & 1.3 Compatible</div>
                 <div><strong>Privacy:</strong> Name, Email, Role</div>
                 <div><strong>Features:</strong> Grade Passback, Deep Linking</div>
@@ -178,7 +171,7 @@ export default function HomePage() {
       <div className="grid md:grid-cols-2 gap-8">
         <div className="card">
           <div className="card-header">
-            <h3 className="text-lg font-semibold text-gray-900">AI Technology</h3>
+            <h3 className="text-lg font-semibent text-gray-900">AI Technology</h3>
           </div>
           <div className="card-body">
             <ul className="space-y-2 text-sm">
