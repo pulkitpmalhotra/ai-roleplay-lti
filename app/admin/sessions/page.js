@@ -1,362 +1,228 @@
-import Link from 'next/link';
-import { getDatabase } from '../../../lib/database';
+import { getDatabase } from '../../../lib/database-mongodb';
 
-async function getSessions() {
+async function getActiveSessions() {
   try {
-    const db = getDatabase();
+    const db = await getDatabase();
     
-    const stmt = db.prepare(`
-      SELECT ls.*, 
-             u.name as user_name, 
-             u.email as user_email,
-             s.title as scenario_title,
-             s.bot_character,
-             COUNT(m.id) as message_count
-      FROM learning_sessions ls
-      JOIN users u ON ls.user_id = u.id
-      JOIN scenarios s ON ls.scenario_id = s.id
-      LEFT JOIN messages m ON ls.id = m.session_id
-      GROUP BY ls.id
-      ORDER BY ls.start_time DESC
-    `);
+    // Get active sessions with user and scenario information
+    const sessions = await db.collection('learning_sessions')
+      .find({ status: { $in: ['active', 'paused'] } })
+      .sort({ start_time: -1 })
+      .toArray();
     
-    return stmt.all();
+    const sessionsWithDetails = [];
+    for (const session of sessions) {
+      // Get user information
+      const user = await db.collection('users').findOne({ _id: session.user_id });
+      
+      // Get scenario information  
+      const scenario = await db.collection('scenarios').findOne({ _id: session.scenario_id });
+      
+      sessionsWithDetails.push({
+        id: session._id.toString(),
+        session_token: session.session_token,
+        user_name: user?.name || 'Unknown User',
+        user_email: user?.email || '',
+        scenario_title: scenario?.title || 'Unknown Scenario',
+        status: session.status,
+        start_time: session.start_time,
+        total_messages: session.total_messages || 0,
+        completion_percentage: session.completion_percentage || 0,
+        final_grade: session.final_grade || 0,
+        lti_context_id: session.lti_context_id
+      });
+    }
+    
+    return sessionsWithDetails;
   } catch (error) {
-    console.error('Error fetching sessions:', error);
+    console.error('Error fetching active sessions:', error);
     return [];
   }
 }
 
-async function getSessionStats() {
+async function getRecentCompletedSessions() {
   try {
-    const db = getDatabase();
+    const db = await getDatabase();
     
-    const activeSessions = db.prepare('SELECT COUNT(*) as count FROM learning_sessions WHERE status = "active"').get().count;
-    const completedSessions = db.prepare('SELECT COUNT(*) as count FROM learning_sessions WHERE status = "completed"').get().count;
-    const abandonedSessions = db.prepare('SELECT COUNT(*) as count FROM learning_sessions WHERE status = "abandoned"').get().count;
-    const totalSessions = db.prepare('SELECT COUNT(*) as count FROM learning_sessions').get().count;
+    const sessions = await db.collection('learning_sessions')
+      .find({ status: 'completed' })
+      .sort({ end_time: -1 })
+      .limit(10)
+      .toArray();
     
-    const avgCompletion = db.prepare('SELECT AVG(completion_percentage) as avg FROM learning_sessions').get().avg || 0;
-    const avgGrade = db.prepare('SELECT AVG(final_grade) as avg FROM learning_sessions WHERE final_grade > 0').get().avg || 0;
+    const sessionsWithDetails = [];
+    for (const session of sessions) {
+      const user = await db.collection('users').findOne({ _id: session.user_id });
+      const scenario = await db.collection('scenarios').findOne({ _id: session.scenario_id });
+      
+      sessionsWithDetails.push({
+        id: session._id.toString(),
+        user_name: user?.name || 'Unknown User',
+        user_email: user?.email || '',
+        scenario_title: scenario?.title || 'Unknown Scenario',
+        completion_percentage: session.completion_percentage || 0,
+        final_grade: session.final_grade || 0,
+        end_time: session.end_time,
+        total_messages: session.total_messages || 0
+      });
+    }
     
-    return {
-      activeSessions,
-      completedSessions,
-      abandonedSessions,
-      totalSessions,
-      avgCompletion: Math.round(avgCompletion),
-      avgGrade: Math.round(avgGrade * 100)
-    };
+    return sessionsWithDetails;
   } catch (error) {
-    console.error('Error fetching session stats:', error);
-    return {
-      activeSessions: 0,
-      completedSessions: 0,
-      abandonedSessions: 0,
-      totalSessions: 0,
-      avgCompletion: 0,
-      avgGrade: 0
-    };
+    console.error('Error fetching completed sessions:', error);
+    return [];
   }
 }
 
 export default async function SessionsPage() {
-  const sessions = await getSessions();
-  const stats = await getSessionStats();
+  const activeSessions = await getActiveSessions();
+  const completedSessions = await getRecentCompletedSessions();
 
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-8">
-        <div className="flex items-center mb-4">
-          <Link href="/admin" className="text-primary-600 hover:text-primary-800 flex items-center">
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Admin
-          </Link>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Session Management</h1>
+        <p className="text-gray-600">Monitor and manage learning sessions</p>
+      </div>
+
+      {/* Active Sessions */}
+      <div className="card mb-8">
+        <div className="card-header">
+          <h2 className="text-lg font-semibold text-gray-900">Active Sessions ({activeSessions.length})</h2>
         </div>
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Session Management</h1>
-            <p className="text-gray-600 mt-2">Monitor and manage all training sessions</p>
-          </div>
-          <div className="flex space-x-3">
-            <Link href="/admin/reports" className="btn-secondary">
-              View Reports
-            </Link>
-          </div>
+        <div className="card-body">
+          {activeSessions.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No active sessions found.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Scenario</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Messages</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Started</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {activeSessions.map(session => (
+                    <tr key={session.id}>
+                      <td className="px-4 py-4">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{session.user_name}</div>
+                          <div className="text-sm text-gray-500">{session.user_email}</div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="text-sm text-gray-900">{session.scenario_title}</div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          session.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {session.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center">
+                          <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                            <div 
+                              className="bg-blue-500 h-2 rounded-full" 
+                              style={{ width: `${session.completion_percentage}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm text-gray-900">{session.completion_percentage}%</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-900">{session.total_messages}</td>
+                      <td className="px-4 py-4 text-sm text-gray-500">
+                        {session.start_time ? new Date(session.start_time).toLocaleString() : 'N/A'}
+                      </td>
+                      <td className="px-4 py-4 text-sm">
+                        <div className="flex space-x-2">
+                          <button className="text-blue-600 hover:text-blue-900">View</button>
+                          <button className="text-yellow-600 hover:text-yellow-900">Pause</button>
+                          <button className="text-red-600 hover:text-red-900">End</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Session Statistics */}
-      <div className="grid md:grid-cols-6 gap-6 mb-8">
-        <div className="card">
-          <div className="card-body text-center">
-            <div className="text-2xl font-bold text-primary-600">{stats.totalSessions}</div>
-            <div className="text-sm text-gray-600">Total Sessions</div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-body text-center">
-            <div className="text-2xl font-bold text-blue-600">{stats.activeSessions}</div>
-            <div className="text-sm text-gray-600">Active</div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-body text-center">
-            <div className="text-2xl font-bold text-green-600">{stats.completedSessions}</div>
-            <div className="text-sm text-gray-600">Completed</div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-body text-center">
-            <div className="text-2xl font-bold text-yellow-600">{stats.abandonedSessions}</div>
-            <div className="text-sm text-gray-600">Abandoned</div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-body text-center">
-            <div className="text-2xl font-bold text-purple-600">{stats.avgCompletion}%</div>
-            <div className="text-sm text-gray-600">Avg Completion</div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-body text-center">
-            <div className="text-2xl font-bold text-orange-600">{stats.avgGrade}%</div>
-            <div className="text-sm text-gray-600">Avg Grade</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sessions Table */}
+      {/* Recent Completed Sessions */}
       <div className="card">
         <div className="card-header">
-          <h2 className="text-xl font-semibold text-gray-900">All Sessions</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Recently Completed Sessions</h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Scenario
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Progress
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Messages
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Started
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {sessions.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
-                    <div className="text-center">
-                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                      <h3 className="mt-2 text-sm font-medium text-gray-900">No sessions yet</h3>
-                      <p className="mt-1 text-sm text-gray-500">Sessions will appear here when users start training.</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                sessions.map((session) => (
-                  <tr key={session.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {session.user_name || 'Unknown User'}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {session.user_email}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {session.scenario_title}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {session.bot_character}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`badge ${
-                        session.status === 'completed' ? 'badge-success' :
-                        session.status === 'active' ? 'badge-warning' :
-                        'badge-danger'
-                      }`}>
-                        {session.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="text-sm font-medium text-gray-900">
-                          {session.completion_percentage || 0}%
-                        </div>
-                        <div className="ml-2 w-16 bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-primary-600 h-2 rounded-full" 
-                            style={{ width: `${session.completion_percentage || 0}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {session.message_count || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>
-                        {new Date(session.start_time).toLocaleDateString()}
-                      </div>
-                      <div className="text-xs">
-                        {new Date(session.start_time).toLocaleTimeString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                      {session.status === 'active' && (
-                        <Link 
-                          href={`/roleplay/${session.session_token}`} 
-                          className="text-blue-600 hover:text-blue-900"
-                          target="_blank"
-                        >
-                          View Live
-                        </Link>
-                      )}
-                      <Link 
-                        href={`/admin/sessions/${session.id}`} 
-                        className="text-primary-600 hover:text-primary-900"
-                      >
-                        Details
-                      </Link>
-                    </td>
+        <div className="card-body">
+          {completedSessions.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No completed sessions found.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Scenario</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completion</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Messages</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Session Activity Summary */}
-      <div className="mt-8 grid md:grid-cols-2 gap-6">
-        <div className="card">
-          <div className="card-header">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-          </div>
-          <div className="card-body">
-            <div className="space-y-3">
-              {sessions.slice(0, 5).map((session) => (
-                <div key={session.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">
-                      {session.user_name} - {session.scenario_title}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {session.message_count} messages, {session.completion_percentage}% complete
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className={`text-xs badge ${
-                      session.status === 'completed' ? 'badge-success' :
-                      session.status === 'active' ? 'badge-warning' : 'badge-danger'
-                    }`}>
-                      {session.status}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {new Date(session.start_time).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {sessions.length === 0 && (
-                <p className="text-gray-500 text-center py-4">No recent activity</p>
-              )}
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {completedSessions.map(session => (
+                    <tr key={session.id}>
+                      <td className="px-4 py-4">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{session.user_name}</div>
+                          <div className="text-sm text-gray-500">{session.user_email}</div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="text-sm text-gray-900">{session.scenario_title}</div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="text-sm text-gray-900">{session.completion_percentage}%</span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          session.final_grade >= 0.8 ? 'bg-green-100 text-green-800' :
+                          session.final_grade >= 0.6 ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {(session.final_grade * 100).toFixed(0)}%
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-900">{session.total_messages}</td>
+                      <td className="px-4 py-4 text-sm text-gray-500">
+                        {session.end_time ? new Date(session.end_time).toLocaleString() : 'N/A'}
+                      </td>
+                      <td className="px-4 py-4 text-sm">
+                        <div className="flex space-x-2">
+                          <button className="text-blue-600 hover:text-blue-900">View</button>
+                          <button className="text-green-600 hover:text-green-900">Report</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-header">
-            <h3 className="text-lg font-semibold text-gray-900">Performance Summary</h3>
-          </div>
-          <div className="card-body">
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Completion Rate:</span>
-                  <span className="font-medium">
-                    {stats.totalSessions > 0 
-                      ? Math.round((stats.completedSessions / stats.totalSessions) * 100)
-                      : 0
-                    }%
-                  </span>
-                </div>
-                <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-green-600 h-2 rounded-full" 
-                    style={{ 
-                      width: `${stats.totalSessions > 0 
-                        ? Math.round((stats.completedSessions / stats.totalSessions) * 100)
-                        : 0
-                      }%` 
-                    }}
-                  ></div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Average Progress:</span>
-                  <span className="font-medium">{stats.avgCompletion}%</span>
-                </div>
-                <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-primary-600 h-2 rounded-full" 
-                    style={{ width: `${stats.avgCompletion}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Sessions today:</span>
-                  <span className="font-medium">
-                    {sessions.filter(s => {
-                      const today = new Date().toDateString();
-                      return new Date(s.start_time).toDateString() === today;
-                    }).length}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm mt-1">
-                  <span className="text-gray-600">Sessions this week:</span>
-                  <span className="font-medium">
-                    {sessions.filter(s => {
-                      const weekAgo = new Date();
-                      weekAgo.setDate(weekAgo.getDate() - 7);
-                      return new Date(s.start_time) > weekAgo;
-                    }).length}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
