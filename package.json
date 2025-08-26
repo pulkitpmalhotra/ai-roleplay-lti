@@ -17,7 +17,11 @@
     "jsonwebtoken": "^9.0.2",
     "uuid": "^9.0.1",
     "bcryptjs": "^2.4.3",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "@supabase/supabase-js": "^2.38.4",
+    "@google/generative-ai": "^0.2.1",
+    "openai": "^4.20.1",
+    "@vercel/postgres": "^0.5.1"
   },
   "devDependencies": {
     "eslint": "^8",
