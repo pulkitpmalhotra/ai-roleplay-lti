@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
-import { initDatabase } from '../../../../lib/database-mongodb';
+import { initDatabase, SupabaseHelper } from '../../../../lib/database-supabase';
 import LTIProvider from '../../../../lib/lti-provider';
-import { redirect } from 'next/navigation';
-
-// Initialize database on startup
-initDatabase();
 
 export async function POST(request) {
   try {
@@ -57,38 +53,15 @@ export async function POST(request) {
       }, { status: 401 });
     }
 
-    // Store or update user information using MongoDB
-    const db = await require('../../../../lib/database-mongodb').getDatabase();
-    
-    const result = await db.collection('users').findOneAndUpdate(
-      { lti_user_id: userInfo.ltiUserId },
-      { 
-        $set: {
-          name: userInfo.name,
-          email: userInfo.email,
-          role: userInfo.role,
-          updated_at: new Date()
-        },
-        $setOnInsert: { 
-          created_at: new Date() 
-        }
-      },
-      { upsert: true, returnDocument: 'after' }
-    );
-
-    const userId = result.value._id.toString();
-
-    // Log LTI launch
-    await db.collection('lti_launches').insertOne({
-      user_id: userId,
-      context_id: userInfo.contextId,
-      resource_link_id: userInfo.resourceLinkId,
-      launch_url: request.url,
-      outcome_service_url: params.lis_outcome_service_url,
-      result_sourcedid: params.lis_result_sourcedid,
-      launch_timestamp: new Date(),
-      success: true
+    // Store or update user information using Supabase
+    const db = new SupabaseHelper();
+    const user = await db.createOrUpdateUser(userInfo.ltiUserId, {
+      name: userInfo.name,
+      email: userInfo.email,
+      role: userInfo.role
     });
+
+    const userId = user.id;
 
     // For admin users, redirect to admin dashboard
     if (userInfo.role === 'admin' || userInfo.role === 'instructor') {
