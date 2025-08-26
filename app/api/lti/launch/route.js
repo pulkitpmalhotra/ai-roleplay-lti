@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { initDatabase } from '../../../../lib/database';
+import { initDatabase } from '../../../../lib/database-mongodb';
 import LTIProvider from '../../../../lib/lti-provider';
 import { redirect } from 'next/navigation';
 
@@ -57,39 +57,38 @@ export async function POST(request) {
       }, { status: 401 });
     }
 
-    // Store or update user information
-    const db = require('../../../../lib/database').getDatabase();
+    // Store or update user information using MongoDB
+    const db = await require('../../../../lib/database-mongodb').getDatabase();
     
-    const userStmt = db.prepare(`
-      INSERT OR REPLACE INTO users (lti_user_id, name, email, role)
-      VALUES (?, ?, ?, ?)
-    `);
-    
-    const userResult = userStmt.run(
-      userInfo.ltiUserId,
-      userInfo.name,
-      userInfo.email,
-      userInfo.role
+    const result = await db.collection('users').findOneAndUpdate(
+      { lti_user_id: userInfo.ltiUserId },
+      { 
+        $set: {
+          name: userInfo.name,
+          email: userInfo.email,
+          role: userInfo.role,
+          updated_at: new Date()
+        },
+        $setOnInsert: { 
+          created_at: new Date() 
+        }
+      },
+      { upsert: true, returnDocument: 'after' }
     );
 
-    const userId = userResult.lastInsertRowid;
+    const userId = result.value._id.toString();
 
     // Log LTI launch
-    const launchStmt = db.prepare(`
-      INSERT INTO lti_launches 
-      (user_id, context_id, resource_link_id, launch_url, outcome_service_url, result_sourcedid, success)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    launchStmt.run(
-      userId,
-      userInfo.contextId,
-      userInfo.resourceLinkId,
-      request.url,
-      params.lis_outcome_service_url,
-      params.lis_result_sourcedid,
-      1
-    );
+    await db.collection('lti_launches').insertOne({
+      user_id: userId,
+      context_id: userInfo.contextId,
+      resource_link_id: userInfo.resourceLinkId,
+      launch_url: request.url,
+      outcome_service_url: params.lis_outcome_service_url,
+      result_sourcedid: params.lis_result_sourcedid,
+      launch_timestamp: new Date(),
+      success: true
+    });
 
     // For admin users, redirect to admin dashboard
     if (userInfo.role === 'admin' || userInfo.role === 'instructor') {
