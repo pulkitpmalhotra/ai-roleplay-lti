@@ -118,7 +118,20 @@ class LTIRoleplayAPITester:
         
         return success1 and success2 and success3
 
-    def test_admin_scenarios_api(self):
+    def test_admin_dashboard(self):
+        """Test admin dashboard endpoint"""
+        print("\n" + "="*50)
+        print("TESTING ADMIN DASHBOARD")
+        print("="*50)
+        
+        success, response = self.run_test(
+            "Admin Dashboard",
+            "GET",
+            "/admin",
+            200
+        )
+        
+        return success
         """Test admin scenarios API endpoints"""
         print("\n" + "="*50)
         print("TESTING ADMIN SCENARIOS API")
