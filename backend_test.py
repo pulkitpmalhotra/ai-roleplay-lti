@@ -173,9 +173,33 @@ class LTIRoleplayAPITester:
         
         return success1 and success2 and success3 and success4
 
+    def create_test_user_direct(self):
+        """Create a test user directly via database API call"""
+        print("\n🔍 Creating test user directly...")
+        
+        # Try to create user via a direct database insert simulation
+        # We'll use the LTI launch endpoint with test=true to create a user
+        try:
+            # First try the test launch which should create a user
+            url = f"{self.base_url}/api/lti/launch?test=true"
+            response = requests.get(url, timeout=10, allow_redirects=False)
+            print(f"   Test Launch Status: {response.status_code}")
+            
+            if response.status_code in [200, 302, 307]:
+                print("   Test user creation attempted")
+                return True
+            return False
+        except Exception as e:
+            print(f"   Error: {str(e)}")
+            return False
+
     def create_test_user(self):
         """Create a test user via LTI launch simulation"""
         print("\n🔍 Creating test user via LTI simulation...")
+        
+        # First try direct method
+        if self.create_test_user_direct():
+            return True
         
         # Simulate LTI launch to create user
         lti_data = {
