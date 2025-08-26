@@ -3,31 +3,12 @@ import { SupabaseHelper } from '../../../../lib/database-supabase';
 
 export async function GET() {
   try {
-    const db = await getDatabase();
-    
-    const scenarios = await db.collection('scenarios')
-      .find({ is_active: true })
-      .sort({ created_at: -1 })
-      .toArray();
-    
-    // Convert MongoDB _id to id for client compatibility
-    const formattedScenarios = scenarios.map(scenario => ({
-      id: scenario._id.toString(),
-      title: scenario.title,
-      description: scenario.description,
-      objective: scenario.objective,
-      bot_character: scenario.bot_character,
-      bot_tone: scenario.bot_tone,
-      bot_context: scenario.bot_context,
-      learning_objectives: scenario.learning_objectives,
-      created_at: scenario.created_at,
-      updated_at: scenario.updated_at,
-      is_active: scenario.is_active
-    }));
+    const db = new SupabaseHelper();
+    const scenarios = await db.getAllScenarios();
     
     return NextResponse.json({
       success: true,
-      scenarios: formattedScenarios
+      scenarios
     });
     
   } catch (error) {
