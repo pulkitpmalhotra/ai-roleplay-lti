@@ -1,22 +1,29 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '../../../lib/database';
+import { getDatabase } from '../../../lib/database-mongodb';
 
 export async function GET() {
   try {
-    const db = getDatabase();
+    const db = await getDatabase();
     
-    const stmt = db.prepare(`
-      SELECT id, title, description, objective, bot_character, bot_tone, created_at
-      FROM scenarios 
-      WHERE is_active = 1 
-      ORDER BY created_at DESC
-    `);
+    const scenarios = await db.collection('scenarios')
+      .find({ is_active: true })
+      .sort({ created_at: -1 })
+      .toArray();
     
-    const scenarios = stmt.all();
+    // Convert MongoDB _id to id for client compatibility
+    const formattedScenarios = scenarios.map(scenario => ({
+      id: scenario._id.toString(),
+      title: scenario.title,
+      description: scenario.description,
+      objective: scenario.objective,
+      bot_character: scenario.bot_character,
+      bot_tone: scenario.bot_tone,
+      created_at: scenario.created_at
+    }));
     
     return NextResponse.json({
       success: true,
-      scenarios
+      scenarios: formattedScenarios
     });
     
   } catch (error) {
