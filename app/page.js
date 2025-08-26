@@ -134,7 +134,7 @@ export default async function HomePage() {
             <div>
               <h3 className="text-lg font-semibold mb-3">LTI Configuration</h3>
               <div className="space-y-2 font-mono text-sm bg-gray-50 p-4 rounded">
-                <div><strong>Launch URL:</strong> https://gemini-trainer.preview.emergentagent.com/api/lti/launch</div>
+                <div><strong>Launch URL:</strong> {process.env.NEXT_PUBLIC_APP_URL || 'https://your-app-name.vercel.app'}/api/lti/launch</div>
                 <div><strong>LTI Version:</strong> 1.1 & 1.3 Compatible</div>
                 <div><strong>Privacy:</strong> Name, Email, Role</div>
                 <div><strong>Features:</strong> Grade Passback, Deep Linking</div>
