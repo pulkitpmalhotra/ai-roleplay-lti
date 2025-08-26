@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverActions: true,
-  },
   env: {
     EMERGENT_LLM_KEY: process.env.EMERGENT_LLM_KEY,
     LTI_SECRET: process.env.LTI_SECRET,
