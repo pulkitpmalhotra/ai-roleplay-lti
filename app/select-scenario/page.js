@@ -2,7 +2,14 @@ import Link from 'next/link';
 
 async function getScenarios() {
   try {
-    const response = await fetch('http://localhost:3000/api/scenarios', {
+    // Use environment variable or fallback to localhost for development
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.NODE_ENV === 'production' 
+        ? 'https://train-ai-mentor.preview.emergentagent.com'
+        : 'http://localhost:3000';
+        
+    const response = await fetch(`${baseUrl}/api/scenarios`, {
       cache: 'no-store'
     });
     if (!response.ok) throw new Error('Failed to fetch scenarios');
