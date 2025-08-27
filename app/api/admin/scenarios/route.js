@@ -15,7 +15,8 @@ export async function GET() {
     console.error('Error fetching admin scenarios:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to fetch scenarios'
+      error: 'Failed to fetch scenarios',
+      details: error.message
     }, { status: 500 });
   }
 }
@@ -26,13 +27,13 @@ export async function POST(request) {
     
     // Validate required fields
     const requiredFields = ['title', 'description', 'objective', 'botCharacter', 'botTone', 'botContext'];
-    for (const field of requiredFields) {
-      if (!scenarioData[field]) {
-        return NextResponse.json({
-          success: false,
-          error: `Missing required field: ${field}`
-        }, { status: 400 });
-      }
+    const missingFields = requiredFields.filter(field => !scenarioData[field]);
+    
+    if (missingFields.length > 0) {
+      return NextResponse.json({
+        success: false,
+        error: `Missing required fields: ${missingFields.join(', ')}`
+      }, { status: 400 });
     }
 
     const db = new SupabaseHelper();
@@ -52,14 +53,16 @@ export async function POST(request) {
     
     return NextResponse.json({
       success: true,
-      scenario: result
+      scenario: result,
+      message: 'Scenario created successfully'
     });
     
   } catch (error) {
     console.error('Error creating scenario:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to create scenario'
+      error: 'Failed to create scenario',
+      details: error.message
     }, { status: 500 });
   }
 }
@@ -91,14 +94,16 @@ export async function PUT(request) {
     
     return NextResponse.json({
       success: true,
-      scenario: result
+      scenario: result,
+      message: 'Scenario updated successfully'
     });
     
   } catch (error) {
     console.error('Error updating scenario:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to update scenario'
+      error: 'Failed to update scenario',
+      details: error.message
     }, { status: 500 });
   }
 }
@@ -127,7 +132,8 @@ export async function DELETE(request) {
     console.error('Error deleting scenario:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to delete scenario'
+      error: 'Failed to delete scenario',
+      details: error.message
     }, { status: 500 });
   }
 }
