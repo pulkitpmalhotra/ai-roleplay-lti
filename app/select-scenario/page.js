@@ -1,4 +1,4 @@
-import { getDatabase } from '../../lib/database-mongodb';
+import { SupabaseHelper } from '../../lib/database-supabase';
 
 export default async function SelectScenario({ searchParams }) {
   const userId = searchParams.user_id || '1';
@@ -8,20 +8,24 @@ export default async function SelectScenario({ searchParams }) {
   let scenarios = [];
   
   try {
-    const db = await getDatabase();
-    const scenarioList = await db.collection('scenarios')
-      .find({ is_active: true })
-      .sort({ created_at: -1 })
-      .toArray();
+    const db = new SupabaseHelper();
+    const scenarioList = await db.getAllScenarios();
     
-    scenarios = scenarioList.map(scenario => ({
-      id: scenario._id.toString(),
-      title: scenario.title,
-      description: scenario.description,
-      objective: scenario.objective,
-      bot_character: scenario.bot_character,
-      bot_tone: scenario.bot_tone
-    }));
+    scenarios = scenarioList
+      .filter(scenario => scenario.is_active)
+      .map(scenario => ({
+        id: scenario.id,
+        title: scenario.title,
+        description: scenario.description,
+        objective: scenario.objective,
+        bot_character: scenario.bot_character,
+        bot_tone: scenario.bot_tone,
+        learning_objectives: scenario.learning_objectives ? 
+          (typeof scenario.learning_objectives === 'string' ? 
+            JSON.parse(scenario.learning_objectives) : 
+            scenario.learning_objectives
+          ) : []
+      }));
   } catch (error) {
     console.error('Error fetching scenarios:', error);
   }
@@ -64,6 +68,23 @@ export default async function SelectScenario({ searchParams }) {
                 <p className="text-sm text-gray-600">
                   {scenario.objective}
                 </p>
+                
+                {scenario.learning_objectives && scenario.learning_objectives.length > 0 && (
+                  <div className="mt-3">
+                    <h5 className="text-xs font-medium text-gray-700 mb-1">Skills you'll practice:</h5>
+                    <ul className="text-xs text-gray-600 space-y-1">
+                      {scenario.learning_objectives.slice(0, 3).map((objective, index) => (
+                        <li key={index} className="flex items-center">
+                          <span className="w-1 h-1 bg-gray-400 rounded-full mr-2"></span>
+                          {objective}
+                        </li>
+                      ))}
+                      {scenario.learning_objectives.length > 3 && (
+                        <li className="text-gray-500">+{scenario.learning_objectives.length - 3} more...</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <form className="w-full" action="/api/roleplay/start-session" method="post">
@@ -86,6 +107,23 @@ export default async function SelectScenario({ searchParams }) {
           </div>
         ))}
       </div>
+
+      {scenarios.length === 0 && (
+        <div className="text-center py-12">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <svg className="w-12 h-12 text-yellow-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <h3 className="text-lg font-medium text-yellow-800 mb-2">No Scenarios Available</h3>
+            <p className="text-yellow-700">
+              Please contact your administrator to set up training scenarios, or visit the admin dashboard to create scenarios.
+            </p>
+            <div className="mt-4">
+              <a href="/admin" className="btn-secondary">Go to Admin Dashboard</a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* How It Works */}
       <div className="mt-12 card">
@@ -112,7 +150,7 @@ export default async function SelectScenario({ searchParams }) {
               </div>
               <h3 className="font-medium mb-2">Practice & Learn</h3>
               <p className="text-sm text-gray-600">
-                Engage in realistic conversations with AI characters powered by Google Gemini.
+                Engage in realistic conversations with AI characters powered by Google Gemini 2.0 Flash.
               </p>
             </div>
             
