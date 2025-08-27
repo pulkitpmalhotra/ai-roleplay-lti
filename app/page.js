@@ -1,23 +1,22 @@
-import { getDatabase } from '../lib/database-mongodb';
+import { SupabaseHelper } from '../lib/database-supabase';
 
 export default async function Home() {
   let scenarios = [];
   
   try {
-    const db = await getDatabase();
-    const scenarioList = await db.collection('scenarios')
-      .find({ is_active: true })
-      .limit(3)
-      .sort({ created_at: -1 })
-      .toArray();
+    const db = new SupabaseHelper();
+    const scenarioList = await db.getAllScenarios();
     
-    scenarios = scenarioList.map(scenario => ({
-      id: scenario._id.toString(),
-      title: scenario.title,
-      description: scenario.description,
-      bot_character: scenario.bot_character,
-      created_at: scenario.created_at
-    }));
+    scenarios = scenarioList
+      .filter(scenario => scenario.is_active)
+      .slice(0, 3)
+      .map(scenario => ({
+        id: scenario.id,
+        title: scenario.title,
+        description: scenario.description,
+        bot_character: scenario.bot_character,
+        created_at: scenario.created_at
+      }));
   } catch (error) {
     console.error('Error fetching scenarios:', error);
   }
@@ -30,7 +29,7 @@ export default async function Home() {
           AI Roleplay Training
         </h1>
         <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-          Practice real-world scenarios with AI-powered roleplay training. Designed for integration with Docebo LMS and powered by Gemini 2.0 Flash for cost-effective, scalable learning experiences.
+          Practice real-world scenarios with AI-powered roleplay training. Designed for integration with LMS platforms like Docebo and Cornerstone, powered by Google Gemini 2.0 Flash for cost-effective, scalable learning experiences.
         </p>
         <div className="flex justify-center space-x-4">
           <a 
@@ -58,7 +57,7 @@ export default async function Home() {
               </svg>
             </div>
             <h3 className="text-xl font-semibold mb-2">AI-Powered Conversations</h3>
-            <p className="text-gray-600">Engage in realistic roleplay scenarios with AI characters powered by Gemini 2.0 Flash</p>
+            <p className="text-gray-600">Engage in realistic roleplay scenarios with AI characters powered by Google Gemini 2.0 Flash</p>
           </div>
         </div>
 
@@ -117,7 +116,7 @@ export default async function Home() {
       {/* LTI Integration Information */}
       <div className="card mb-16">
         <div className="card-header">
-          <h2 className="text-2xl font-semibold text-gray-900">LTI Integration for Docebo</h2>
+          <h2 className="text-2xl font-semibold text-gray-900">LTI Integration for Learning Management Systems</h2>
         </div>
         <div className="card-body">
           <div className="grid md:grid-cols-2 gap-8">
@@ -131,31 +130,31 @@ export default async function Home() {
               </div>
             </div>
             <div>
-              <h3 className="text-lg font-semibold mb-3">Supported Features</h3>
+              <h3 className="text-lg font-semibold mb-3">Supported LMS Platforms</h3>
               <ul className="space-y-2">
                 <li className="flex items-center">
                   <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  Automatic user authentication
+                  Docebo LMS
                 </li>
                 <li className="flex items-center">
                   <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  Progress tracking and grading
+                  Cornerstone OnDemand
                 </li>
                 <li className="flex items-center">
                   <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  Admin scenario management
+                  Canvas LMS
                 </li>
                 <li className="flex items-center">
                   <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  Cost-effective scaling with Gemini 2.0 Flash
+                  Any LTI 1.1/1.3 compatible platform
                 </li>
               </ul>
             </div>
@@ -186,11 +185,11 @@ export default async function Home() {
           </div>
           <div className="card-body">
             <ul className="space-y-2 text-sm">
-              <li><strong>Database:</strong> MongoDB with session persistence</li>
+              <li><strong>Database:</strong> Supabase with real-time features</li>
               <li><strong>Frontend:</strong> Next.js 14 with Tailwind CSS</li>
               <li><strong>Security:</strong> JWT tokens and LTI validation</li>
               <li><strong>Scalability:</strong> Optimized for multiple users</li>
-              <li><strong>Integration:</strong> Docebo LMS compatible</li>
+              <li><strong>Integration:</strong> Multi-platform LMS compatible</li>
             </ul>
           </div>
         </div>
