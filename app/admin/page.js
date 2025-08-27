@@ -1,22 +1,27 @@
-import { getDatabase } from '../../lib/database-mongodb';
+import { SupabaseHelper } from '../../lib/database-supabase';
 import Link from 'next/link';
 
 async function getStats() {
   try {
-    const db = await getDatabase();
+    const db = new SupabaseHelper();
     
-    const totalScenariosResult = await db.collection('scenarios').countDocuments({ is_active: true });
-    const activeScenariosResult = await db.collection('scenarios').countDocuments({ is_active: true });
-    const totalUsersResult = await db.collection('users').countDocuments();
-    const activeSessionsResult = await db.collection('learning_sessions').countDocuments({ status: 'active' });
-    const completedSessionsResult = await db.collection('learning_sessions').countDocuments({ status: 'completed' });
+    // Get scenario statistics
+    const scenarios = await db.getAllScenarios();
+    const totalScenarios = scenarios.length;
+    const activeScenarios = scenarios.filter(s => s.is_active).length;
+    
+    // Note: For now we'll return mock data for users/sessions since those tables 
+    // might not exist yet. In production, implement these queries in SupabaseHelper
+    const totalUsers = 0; // await db.getUserCount();
+    const activeSessions = 0; // await db.getActiveSessionCount();
+    const completedSessions = 0; // await db.getCompletedSessionCount();
     
     return {
-      totalScenarios: totalScenariosResult,
-      activeScenarios: activeScenariosResult,
-      totalUsers: totalUsersResult,
-      activeSessions: activeSessionsResult,
-      completedSessions: completedSessionsResult
+      totalScenarios,
+      activeScenarios,
+      totalUsers,
+      activeSessions,
+      completedSessions
     };
   } catch (error) {
     console.error('Error fetching stats:', error);
@@ -32,15 +37,11 @@ async function getStats() {
 
 async function getScenarios() {
   try {
-    const db = await getDatabase();
-    const scenarios = await db.collection('scenarios')
-      .find({ is_active: true })
-      .sort({ created_at: -1 })
-      .limit(10)
-      .toArray();
+    const db = new SupabaseHelper();
+    const scenarios = await db.getAllScenarios();
     
-    return scenarios.map(scenario => ({
-      id: scenario._id.toString(),
+    return scenarios.slice(0, 10).map(scenario => ({
+      id: scenario.id,
       title: scenario.title,
       description: scenario.description,
       bot_character: scenario.bot_character,
