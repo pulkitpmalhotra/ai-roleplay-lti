@@ -4,6 +4,7 @@ export default async function Home() {
   let scenarios = [];
   
   try {
+    // Direct database access instead of HTTP API call
     const db = new SupabaseHelper();
     const scenarioList = await db.getAllScenarios();
     
@@ -19,6 +20,30 @@ export default async function Home() {
       }));
   } catch (error) {
     console.error('Error fetching scenarios:', error);
+    // Provide fallback scenarios for build time
+    scenarios = [
+      {
+        id: 1,
+        title: 'Customer Service Excellence',
+        description: 'Practice handling difficult customer service situations with empathy and professionalism',
+        bot_character: 'Customer Service Representative',
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 2,
+        title: 'Sales Negotiation Training',
+        description: 'Master the art of sales negotiation and closing deals effectively',
+        bot_character: 'Potential Customer',
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 3,
+        title: 'Leadership Communication',
+        description: 'Practice effective leadership communication and team motivation',
+        bot_character: 'Team Member',
+        created_at: new Date().toISOString()
+      }
+    ];
   }
 
   return (
