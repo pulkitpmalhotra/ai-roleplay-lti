@@ -1,13 +1,11 @@
 {
   "name": "lti-gemini-roleplay-bot",
-  "version": "1.0.0",
-  "description": "LTI-integrated Gemini roleplay bot for guided learning in LMS platforms like Docebo and Cornerstone",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "next start"
   },
   "dependencies": {
     "next": "14.0.4",
@@ -15,9 +13,7 @@
     "react-dom": "^18",
     "@supabase/supabase-js": "^2.38.4",
     "@google/generative-ai": "^0.2.1",
-    "jsonwebtoken": "^9.0.2",
-    "uuid": "^9.0.1",
-    "dotenv": "^16.3.1"
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
     "eslint": "^8",
@@ -25,8 +21,5 @@
     "tailwindcss": "^3.3.6",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.32"
-  },
-  "engines": {
-    "node": ">=18.0.0"
   }
 }
